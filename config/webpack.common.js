@@ -20,6 +20,7 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
+            plugins: ['transform-async-to-generator'],
             presets: ['env']
           }
         }
@@ -32,5 +33,11 @@ module.exports = {
       template: resolve('src/home/index.html'),
       chunks: ['home']
     })
-  ]
+  ],
+  node: {
+    console: true,
+    fs: 'empty',
+    net: 'empty',
+    tls: 'empty'
+  }
 }
