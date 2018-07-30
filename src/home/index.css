@@ -56,6 +56,34 @@ body {
   margin: 0 0 15px;
 }
 
+.entity {
+  background: #e7decd;
+  display: grid;
+  grid-gap: 20px;
+  grid-template-columns: 0.6fr 0.4fr;
+  margin: 0 0 5px;
+  padding: 15px 5px;
+  position: relative;
+}
+
+.entity__name,
+.entity__completion {
+  z-index: 5;
+}
+
+.entity__completion {
+  align-self: center;
+  justify-self: end;
+}
+
+.entity__bar {
+  background: rgba(128, 78, 73, 0.3);
+  height: 100%;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
 .steps {
   list-style-type: none;
   margin: 20px 0;

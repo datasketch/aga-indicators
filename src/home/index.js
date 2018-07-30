@@ -7,13 +7,12 @@ window.addEventListener('DOMContentLoaded', init)
 function init () {
   fetchSpreadsheetData()
     .then(transformData)
-    .then(buildNetwork)
+    .then(buildGraphics)
 }
 
 function transformData (tabletop) {
-  console.log('Transforming')
   const data = tabletop.sheets('aga').all()
-  const items = data.map(item => ({ id: item.compromiso, completion: item.completitud }))
+  const items = data.map(item => ({ id: item.compromiso, completion: item.completitud, sector: item.sector, entity: item.entidad }))
   const grouped = groupBy(items, 'id', 'completion')
   const bubbles = Object.keys(grouped).reduce((group, key) => {
     group[key] = grouped[key].reduce((a, b) => a + b) / grouped[key].length
@@ -23,7 +22,32 @@ function transformData (tabletop) {
     n.push({ id: key, completion: bubbles[key] })
     return n
   }, [])
-  return nodes
+  /* Entities */
+  const groupedEntities = groupBy(items, 'entity', 'completion')
+  const temp = Object.keys(groupedEntities).reduce((group, key) => {
+    group[key] = groupedEntities[key].reduce((a, b) => a + b) / groupedEntities[key].length
+    return group
+  }, {})
+  const entities = Object.keys(temp).reduce((n, key) => {
+    n.push({ entity: key, completion: temp[key] })
+    return n
+  }, []).sort((a, b) => a.completion - b.completion)
+  return { nodes, entities }
+}
+
+function buildGraphics ({nodes, entities}) {
+  buildEntitiesTemplate(entities)
+  buildNetwork(nodes)
+}
+
+function buildEntitiesTemplate (entities) {
+  const container = document.getElementById('entities')
+  const template = entities.reduce((str, entity) => {
+    const completion = entity.completion.toFixed(1)
+    str += `<div class="entity" data-completion="${completion}"><div class="entity__name">${entity.entity}</div><div class="entity__completion">${completion}%</div><div class="entity__bar" style="width: ${completion}%"></div></div>`
+    return str
+  }, '')
+  container.innerHTML = template
 }
 
 function buildNetwork (nodes) {
@@ -34,7 +58,7 @@ function buildNetwork (nodes) {
   const scaleRadius = d3.scaleLinear()
     .domain([0, 100])
     .range([5, 105])
-  const svg = d3.select('svg')
+  const svg = d3.select('.bubble-chart').select('svg')
   const simulation = d3.forceSimulation()
     .force('collision', d3.forceCollide().radius(d => d.completion + 5))
     .force('charge', d3.forceManyBody().strength(5))
@@ -96,7 +120,7 @@ function buildNetwork (nodes) {
   }
 
   function createTooltip () {
-    tooltip = d3.select('.graphic')
+    tooltip = d3.select('.bubble-chart')
       .append('div')
       .attr('class', 'tooltip')
       .style('pointer-events', 'none')
