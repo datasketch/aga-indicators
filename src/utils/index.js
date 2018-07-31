@@ -14,11 +14,6 @@ function fetchSpreadsheetData () {
   })
 }
 
-function jsonToCsv (json, str = true) {
-  const csv = json.map((field) => Object.values(field)).join('\r\n')
-  return str ? csv : csv.split('\r\n')
-}
-
 function groupBy (array, key, alt) {
   return array.reduce((group, item) => {
     group[item[key]] = group[item[key]] || []
@@ -27,4 +22,4 @@ function groupBy (array, key, alt) {
   }, {})
 }
 
-export { fetchSpreadsheetData, jsonToCsv, groupBy }
+export { fetchSpreadsheetData, groupBy }
