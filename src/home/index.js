@@ -23,13 +23,22 @@ function transformData (tabletop) {
       activity: item.actividad
     }
   })
-  const grouped = groupBy(items, 'id', 'completion')
+  const grouped = groupBy(items, 'id')
   const bubbles = Object.keys(grouped).reduce((group, key) => {
-    group[key] = grouped[key].reduce((a, b) => a + b) / grouped[key].length
+    const sum = grouped[key].reduce((sum, object) => {
+      sum += object.completion
+      return sum
+    }, 0)
+    const length = grouped[key].length
+    const sector = Array.from(new Set(grouped[key].map(item => item.sector)))
+    group[key] = {
+      total: sum / length,
+      sector: sector.length > 1 ? sector : sector.join('')
+    }
     return group
   }, {})
   const nodes = Object.keys(bubbles).reduce((n, key) => {
-    n.push({ id: key, completion: bubbles[key] })
+    n.push({ id: key, completion: bubbles[key].total, sector: bubbles[key].sector })
     return n
   }, [])
   /* Entities */
@@ -156,7 +165,7 @@ function buildGantt (tasks) {
       .attr('rx', 3)
       .attr('ry', 3)
       .attr('fill', '#698f3f')
-      .attr('stroke', '#698f3f')
+      .attr('opacity', 0.5)
 
     rectangles = incomingRects.merge(rectangles)
 
@@ -191,11 +200,7 @@ function buildGantt (tasks) {
       </p>
     `
     const output = document.querySelector('.gantt-tag')
-    // const x = this.x.animVal.value + (this.width.animVal.value / 4) + 'px'
-    // const y = this.y.animVal.value + barHeight + 'px'
     output.innerHTML = detailTemplate
-    // output.style.top = y
-    // output.style.left = x
     output.style.display = 'block'
   }
 
@@ -206,34 +211,58 @@ function buildGantt (tasks) {
 }
 
 function buildNetwork (nodes) {
-  let width, height, tooltip
+  let width, height, tooltip, optionSelected
+  const radius = {
+    min: 5,
+    max: 80
+  }
+  const margin = radius.max
   const nodeColors = d3.scaleLinear()
     .domain([0, 25, 50, 75, 100])
     .range(['#FF0000', '#FFFF00', '#FFFF00', '#7FFF00', '#00FF00'])
   const scaleRadius = d3.scaleLinear()
     .domain([0, 100])
-    .range([5, 105])
+    .range([radius.min, radius.max])
   const svg = d3.select('.bubble-chart').select('svg')
+  const svgGroup = svg.append('g')
+    .attr('transform', `translate(${margin}, ${margin / 2})`)
+  let node = svgGroup.append('g').attr('class', 'nodes')
   const simulation = d3.forceSimulation()
-    .force('collision', d3.forceCollide().radius(d => d.completion + 5))
-    .force('charge', d3.forceManyBody().strength(5))
-    .force('x', d3.forceX())
-    .force('y', d3.forceY())
-
-  let node = svg.append('g')
-    .attr('class', 'nodes')
-    .selectAll('circle')
-    .data(nodes)
-    .enter()
-    .append('circle')
-    .attr('r', d => scaleRadius(d.completion))
-    .attr('fill', d => nodeColors(d.completion))
-    .on('mouseover', showDetail)
-    .on('mouseout', hideDetail)
-
-  simulation
-    .nodes(nodes)
+    .force('charge', d3.forceManyBody())
+    .force('collision', d3.forceCollide().radius(d => scaleRadius(d.completion)))
     .on('tick', ticked)
+
+  renderTemplate()
+  resize()
+  window.addEventListener('resize', resize)
+  updateBubbles()
+
+  function updateBubbles (filter) {
+    let data
+    if (!filter || filter === 'Todos') {
+      data = nodes
+    } else {
+      data = nodes.filter(node => node.sector === filter)
+    }
+    node = svgGroup.selectAll('circle').data(data)
+
+    node.exit().transition().attr('r', 0).remove()
+
+    const incomingNodes = node
+      .enter()
+      .append('circle')
+      .on('mouseover', showDetail)
+      .on('mouseout', hideDetail)
+
+    node = incomingNodes.merge(node)
+    node
+      .attr('r', 0)
+      .transition()
+      .attr('r', d => scaleRadius(d.completion))
+      .attr('fill', d => nodeColors(d.completion))
+    simulation.nodes(nodes)
+    simulation.restart()
+  }
 
   function ticked () {
     node
@@ -241,13 +270,14 @@ function buildNetwork (nodes) {
       .attr('cy', d => d.y)
   }
 
-  resize()
-  d3.select(window).on('resize', resize)
   function resize () {
-    width = window.innerWidth
-    height = window.innerHeight
-    svg.attr('width', width).attr('height', height)
-    simulation.force('center', d3.forceCenter(width / 2, height / 2))
+    width = window.innerWidth - (2 * margin)
+    height = (window.innerHeight * 0.75) - (2 * margin)
+    svg.attr('width', width + (2 * margin)).attr('height', height + (2 * margin))
+    simulation
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('x', d3.forceX(width / 2))
+      .force('y', d3.forceY(width / 2))
     simulation.restart()
   }
 
@@ -303,5 +333,22 @@ function buildNetwork (nodes) {
 
     tooltip.style('top', cursorY + 'px')
     tooltip.style('left', cursorX + 'px')
+  }
+
+  function renderTemplate () {
+    const categories = Array.from(new Set(nodes.map(node => node.sector)))
+    categories.unshift('Todos')
+    const select = document.getElementById('bubble-select')
+    const options = categories.reduce((str, category, index) => {
+      str += `<option value="${index}">${category}</option>`
+      return str
+    }, '')
+    optionSelected = categories[0]
+    select.innerHTML = options
+    select.querySelector('option').selected = true
+    select.addEventListener('change', e => {
+      optionSelected = categories[e.target.value]
+      updateBubbles(optionSelected)
+    })
   }
 }

@@ -151,12 +151,13 @@ svg {
 }
 
 #gantt svg rect {
-  fill: rgba(105, 143, 63, 0.2);
+  stroke: #698f3f;
   stroke-width: 1px;
 }
 
 .select {
   position: relative;
+  margin-bottom: 20px;
 }
 
 .select select {
@@ -167,6 +168,7 @@ svg {
   display: block;
   padding: 10px 50px 10px 10px;
   position: relative;
+  width: 100%;
 }
 .select:after {
   border: 6px solid transparent;
