@@ -153,8 +153,8 @@ function buildGantt (tasks) {
     const incomingRects = rectangles
       .enter()
       .append('rect')
-      .attr('rx', 5)
-      .attr('ry', 5)
+      .attr('rx', 3)
+      .attr('ry', 3)
       .attr('fill', '#698f3f')
       .attr('stroke', '#698f3f')
 
@@ -167,6 +167,41 @@ function buildGantt (tasks) {
       .attr('width', 0)
       .transition(t)
       .attr('width', d => scaleDate(formatDate(d.endDate)) - scaleDate(formatDate(d.startDate)))
+
+    rectangles.on('mouseover', showDetail).on('mouseout', hideDetail)
+  }
+
+  function showDetail (rect) {
+    const detailTemplate = `
+      <p>
+        <strong>Actividad: </strong>
+        <span>${rect.task}</span>
+      </p>
+      <p>
+        <strong>Inicio: </strong>
+        <span>${rect.startDate}</span>
+      </p>
+      <p>
+        <strong>Finalización: </strong>
+        <span>${rect.endDate}</span>
+      </p>
+      <p>
+        <strong>Completado: </strong>
+        <span>${rect.completion.toFixed(1)}%</span>
+      </p>
+    `
+    const output = document.querySelector('.gantt-tag')
+    // const x = this.x.animVal.value + (this.width.animVal.value / 4) + 'px'
+    // const y = this.y.animVal.value + barHeight + 'px'
+    output.innerHTML = detailTemplate
+    // output.style.top = y
+    // output.style.left = x
+    output.style.display = 'block'
+  }
+
+  function hideDetail (rect) {
+    const output = document.querySelector('.gantt-tag')
+    output.style.display = 'none'
   }
 }
 
