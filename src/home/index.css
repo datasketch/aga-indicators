@@ -140,6 +140,11 @@ svg {
   margin: 0;
 }
 
+.bubble-legend {
+  width: 100%;
+  height: 70px;
+}
+
 .list {
   font-weight: 300;
 }

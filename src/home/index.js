@@ -216,6 +216,7 @@ function buildGantt (tasks) {
 
 function buildNetwork (nodes) {
   let width, height, tooltip, optionSelected
+  const palette = ['#FF0000', '#FFFF00', '#FFFF00', '#7FFF00', '#00FF00']
   const radius = {
     min: 20,
     max: 100
@@ -223,7 +224,7 @@ function buildNetwork (nodes) {
   const margin = radius.max
   const nodeColors = d3.scaleLinear()
     .domain([0, 25, 50, 75, 100])
-    .range(['#FF0000', '#FFFF00', '#FFFF00', '#7FFF00', '#00FF00'])
+    .range(palette)
   const scaleRadius = d3.scaleLinear()
     .domain([0, 100])
     .range([radius.min, radius.max])
@@ -236,6 +237,7 @@ function buildNetwork (nodes) {
     .force('collision', d3.forceCollide().radius(d => scaleRadius(d.completion)))
     .on('tick', ticked)
 
+  buildLegend()
   renderTemplate()
   resize()
   window.addEventListener('resize', resize)
@@ -354,6 +356,47 @@ function buildNetwork (nodes) {
     select.addEventListener('change', e => {
       optionSelected = categories[e.target.value]
       updateBubbles(optionSelected)
+    })
+  }
+
+  function buildLegend () {
+    const container = d3.select('.bubble-legend')
+    const margin = { right: 10, top: 30, left: 10, bottom: 30 }
+    let width = container.node().getBoundingClientRect().width - margin.right - margin.left
+    let height = container.node().getBoundingClientRect().height - margin.top - margin.bottom
+    const svg = container.append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+    const legend = svg.append('g')
+      .attr('transform', `translate(${margin.left}, ${margin.top})`)
+    const defs = legend.append('defs')
+    const gradient = defs.append('linearGradient')
+      .attr('id', 'legend')
+      .attr('x1', '0%')
+      .attr('y1', '0%')
+      .attr('x2', '100%')
+      .attr('y2', '0%')
+    palette.forEach((color, index) => {
+      const percentage = (index / (palette.length - 1)) * 100
+      gradient.append('stop')
+        .attr('offset', `${percentage}%`)
+        .attr('style', `stop-color: ${color};stop-opacity: 1`)
+    })
+
+    legend.append('rect')
+      .attr('fill', 'url(#legend)')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', width)
+      .attr('height', height)
+
+    const scale = d3.scaleLinear().domain([0, 1]).range([0, width])
+    const legendAxis = d3.axisBottom().scale(scale).ticks(5).tickFormat(d3.format('~%'))
+    legend.append('g').attr('transform', `translate(0, ${height})`).call(legendAxis)
+    window.addEventListener('resize', () => {
+      width = container.node().getBoundingClientRect().width - margin.right - margin.left
+      svg.attr('width', width + margin.left + margin.right)
+      legend.attr('width', width + margin.left + margin.right)
     })
   }
 }
