@@ -41,6 +41,10 @@ function transformData (tabletop) {
     n.push({ id: key, completion: bubbles[key].total, sector: bubbles[key].sector })
     return n
   }, [])
+  // const total = nodes.reduce((number, node) => {
+  //   number += node.completion
+  //   return number
+  // }, 0)
   /* Entities */
   const groupedEntities = groupBy(items, 'entity', 'completion')
   const temp = Object.keys(groupedEntities).reduce((group, key) => {
@@ -213,8 +217,8 @@ function buildGantt (tasks) {
 function buildNetwork (nodes) {
   let width, height, tooltip, optionSelected
   const radius = {
-    min: 5,
-    max: 80
+    min: 20,
+    max: 100
   }
   const margin = radius.max
   const nodeColors = d3.scaleLinear()
@@ -272,7 +276,7 @@ function buildNetwork (nodes) {
 
   function resize () {
     width = window.innerWidth - (2 * margin)
-    height = (window.innerHeight * 0.75) - (2 * margin)
+    height = window.innerHeight - (2 * margin)
     svg.attr('width', width + (2 * margin)).attr('height', height + (2 * margin))
     simulation
       .force('center', d3.forceCenter(width / 2, height / 2))
@@ -294,6 +298,10 @@ function buildNetwork (nodes) {
       <p>
         <strong>Completado: </strong>
         <span>${node.completion.toFixed(2)}%</span>
+      </p>
+      <p>
+        <strong>Sector: </strong>
+        <span>${node.sector}</span>
       </p>
     `
     showTooltip(content, d3.event)
@@ -325,11 +333,8 @@ function buildNetwork (nodes) {
   }
 
   function updatePosition (event) {
-    const { clientX, clientY } = event
-    const ttw = parseFloat(tooltip.style('width').replace(/\D/g, ''))
-    const tth = parseFloat(tooltip.style('height').replace(/\D/g, ''))
-    const cursorX = clientX - (ttw / 2)
-    const cursorY = (clientY - (tth / 2)) + 50
+    const cursorX = event.target.cx.animVal.value
+    const cursorY = event.target.cy.animVal.value + (event.target.r.animVal.value * 1.5)
 
     tooltip.style('top', cursorY + 'px')
     tooltip.style('left', cursorX + 'px')

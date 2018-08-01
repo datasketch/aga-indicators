@@ -32,7 +32,7 @@ body {
   font-family: 'Libre Baskerville', serif;
   font-weight: 400;
   margin: 0;
-  padding: 25px 0;
+  padding: 50px 0;
   text-align: left;
 }
 
@@ -85,19 +85,17 @@ body {
 }
 
 .steps {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr;
   list-style-type: none;
   margin: 20px 0;
   padding: 0;
+  grid-gap: 20px;
 }
 
 .step {
   display: flex;
-  width: 100%;
-  margin-bottom: 25px;
-}
-
-.step:nth-last-child(1) {
-  margin-bottom: 0;
 }
 
 .step__number {
@@ -211,9 +209,9 @@ svg {
   .title {
     text-align: center;
   }
-  .step {
-    width: 70%;
-    margin-bottom: 35px;
+  .steps {
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 50px;
   }
   .step__number {
     font-size: 70px;
@@ -226,10 +224,6 @@ svg {
 @media screen and (min-width: 992px) {
   .container {
     width: 75%;
-  }
-  .step {
-    width: 50%;
-    margin-bottom: 50px;
   }
   .step__number {
     font-size: 100px;
