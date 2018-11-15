@@ -1,6 +1,14 @@
 import './index.css'
 import { fetchSpreadsheetData, groupBy } from '../utils'
 import * as d3 from 'd3'
+const moment = require('moment')
+const nowDisplay = document.getElementById('now')
+moment.locale('es', {
+  months: 'Enero_Febrero_Marzo_Abril_Mayo_Junio_Julio_Agosto_Septiembre_Octubre_Noviembre_Diciembre'.split('_')
+})
+// Fecha actual
+const now = moment()
+nowDisplay.textContent = now.format('MMMM DD [del año] YYYY')
 
 window.addEventListener('DOMContentLoaded', init)
 
@@ -41,20 +49,8 @@ function transformData (tabletop) {
     n.push({ id: key, completion: bubbles[key].total, sector: bubbles[key].sector })
     return n
   }, [])
-  // const total = nodes.reduce((number, node) => {
-  //   number += node.completion
-  //   return number
-  // }, 0)
   /* Entities */
-  const groupedEntities = groupBy(items, 'entity', 'completion')
-  const temp = Object.keys(groupedEntities).reduce((group, key) => {
-    group[key] = groupedEntities[key].reduce((a, b) => a + b) / groupedEntities[key].length
-    return group
-  }, {})
-  const entities = Object.keys(temp).reduce((n, key) => {
-    n.push({ entity: key, completion: temp[key] })
-    return n
-  }, []).sort((a, b) => a.completion - b.completion)
+  const entities = groupBy(items, 'entity')
   /* Activities */
   const tasks = items.map(task => {
     return {
@@ -69,16 +65,89 @@ function transformData (tabletop) {
 }
 
 function buildGraphics ({nodes, entities, tasks}) {
+  // buildTotalEntitiesTemplate(entities)
   buildEntitiesTemplate(entities)
   buildNetwork(nodes)
   buildGantt(tasks)
 }
 
+// function buildTotalEntitiesTemplate (entities) {
+//   /* eslint-disable no-return-assign */
+//   const totals = Object.keys(entities).reduce((group, key) => {
+//     group[key] = entities[key].reduce((a, b) => a += b.completion, 0) / entities[key].length
+//     return group
+//   }, {})
+//   const sorted = Object.keys(totals).reduce((n, key) => {
+//     n.push({ entity: key, completion: totals[key] })
+//     return n
+//   }, [])// .sort((a, b) => a.completion - b.completion)
+
+//   const container = document.getElementById('entities-total')
+//   const template = sorted.reduce((str, entity) => {
+//     const completion = entity.completion.toFixed(1)
+//     str += `<div class='entity' data-completion='${completion}'><div class='entity__name'>${entity.entity}</div><div class='entity__completion'>${completion}%</div><div class='entity__bar' style='width: ${completion}%'></div></div>`
+//     return str
+//   }, '')
+//   container.innerHTML = template
+// }
+
 function buildEntitiesTemplate (entities) {
-  const container = document.getElementById('entities')
-  const template = entities.reduce((str, entity) => {
-    const completion = entity.completion.toFixed(1)
-    str += `<div class='entity' data-completion='${completion}'><div class='entity__name'>${entity.entity}</div><div class='entity__completion'>${completion}%</div><div class='entity__bar' style='width: ${completion}%'></div></div>`
+  /* eslint-disable no-return-assign */
+  // Descarta las actividades cuya fecha de inicio es posterior a la fecha actual
+  const started = Object.keys(entities).reduce((group, entity) => {
+    const started = entities[entity].filter(activity => {
+      return now.isSameOrAfter(moment(activity.startDate, 'YYYY-MM-DD'))
+    })
+    group[entity] = started
+    return group
+  }, {})
+
+  // Computación de expectativa vs realidad
+  const data = Object.keys(started).reduce((group, entity) => {
+    const comparison = started[entity].map(({ startDate, endDate, completion: reality }) => {
+      // Fecha de inicio de la actividad
+      const begin = moment(startDate, 'YYYY/MM/DD')
+      // Fecha final de la actividad
+      const finish = moment(endDate, 'YYYY/MM/DD')
+      // Días programados por la entidad para terminar la actividad
+      const daysToComplete = finish.diff(begin, 'days')
+      // Porcentaje diario requerido para terminar la actividad en los días programados
+      const percentagePerDay = 100 / daysToComplete
+      // Los días que han pasado desde la fecha inicial de la actividad hasta HOY (la fecha actual)
+      const daysUntilNow = now.diff(begin, 'days')
+      // Porcentaje finalizado hasta hoy
+      const percentageUntilNow = percentagePerDay * daysUntilNow
+      const expectation = percentageUntilNow >= 100 ? 100 : percentageUntilNow
+      return { expectation, reality }
+    })
+    const len = started[entity].length
+    group[entity] = {}
+    group[entity].reality = comparison.reduce((a, b) => a += b.reality, 0) / len
+    group[entity].expectation = comparison.reduce((a, b) => a += b.expectation, 0) / len
+    return group
+  }, {})
+
+  // Organiza de manera ascendente por el total del valor `reality`
+  const sorted = Object.keys(data).reduce((n, entity) => {
+    n.push({ entity, expectation: data[entity].expectation, reality: data[entity].reality })
+    return n
+  }, []).sort((a, b) => a.reality - b.reality)
+
+  const container = document.querySelector('.entities')
+
+  const template = sorted.reduce((str, entity) => {
+    const reality = entity.reality.toFixed(1)
+    const expectation = entity.expectation.toFixed(1)
+    str += `
+      <li class='entity'>
+        <p class='entity__name'>${entity.entity}</p>
+        <div class="entity__bar">
+          <div class='entity__reality' style='width: ${reality}%'><span class="entity__value">${reality}%</span></div>
+        </div>
+        <div class="entity__bar">
+          <div class='entity__expectation' style='width: ${expectation}%'><span class="entity__value">${expectation}%</span></div>
+        </div>
+      </li>`
     return str
   }, '')
   container.innerHTML = template
